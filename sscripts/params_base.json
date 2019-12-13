@@ -1,0 +1,10 @@
+{
+    "name": "runname",
+    "num-cells-per-rank": cpr,
+    "num-ranks": 1,
+    "num-synapses": ns,
+    "duration": 100,
+    "min-delay": 10,
+    "spike-frequency": 10,
+    "realtime-ratio": 0.1
+}
