@@ -75,6 +75,10 @@ private:
     std::vector<cell_size_type> index_divisions_;
     util::partition_view_type<std::vector<cell_size_type>> index_part_;
 
+    //Stefan added
+    std::unordered_map<cell_member_type, cell_size_type> conn_table_map;
+    //----------
+
     distributed_context_handle distributed_;
     task_system_handle thread_pool_;
     std::uint64_t num_spikes_ = 0u;

@@ -87,7 +87,7 @@ communicator::communicator(const recipe& rec,
     // The loop above gave the information required to construct in place
     // the connections as partitioned by the domain of their source gid.
     connections_.resize(n_cons);
-    connection_part_ = algorithms::make_index(src_counts);
+    connection_part_ = algorithms::make_index(src_counts); // Prefix sum, including empty prefix
     auto offsets = connection_part_;
     std::size_t pos = 0;
     for (const auto& cell: gid_infos) {
@@ -108,8 +108,16 @@ communicator::communicator(const recipe& rec,
     // This is num_domains_ independent sorts, so it can be parallelized trivially.
     const auto& cp = connection_part_;
     threading::parallel_for::apply(0, num_domains_, thread_pool_.get(),
-        [&](cell_size_type i) {
-            util::sort(util::subrange_view(connections_, cp[i], cp[i+1]));
+            [&](cell_size_type i) {
+        util::sort(util::subrange_view(connections_, cp[i], cp[i+1]));
+        });
+
+    threading::parallel_for::apply(0, num_domains_, thread_pool_.get(),
+            [&](cell_size_type i) {
+            for (auto j = cp[i]; j<cp[i+1]; j++)
+                if(j==cp[i] || connections_[j].source() != connections_[j-1].source()){
+                    conn_table_map[connections_[j].source()] = j;
+                }
         });
 }
 
@@ -155,6 +163,7 @@ void communicator::make_event_queues(
     const auto& sp = global_spikes.partition();
     const auto& cp = connection_part_;
     for (auto dom: make_span(num_domains_)) {
+
         auto cons = subrange_view(connections_, cp[dom], cp[dom+1]);
         auto spks = subrange_view(global_spikes.values(), sp[dom], sp[dom+1]);
 
@@ -166,13 +175,12 @@ void communicator::make_event_queues(
         };
 
         // We have a choice of whether to walk spikes or connections:
-        // i.e., we can iterate over the spikes, and for each spike search
-        // the for connections that have the same source; or alternatively
-        // for each connection, we can search the list of spikes for spikes
-        // with the same source.
+        // i.e., we can iterate over the spikes, and for each connection, we can search the list
+        // of spikes for spikes with the same source; or alternatively
+        // for each spike search the for connections that have the same source.
         //
         // We iterate over whichever set is the smallest, which has
-        // complexity of order max(S log(C), C log(S)), where S is the
+        // complexity of order min(S log(C), C log(S)), where S is the
         // number of spikes, and C is the number of connections.
         if (cons.size()<spks.size()) {
             auto sp = spks.begin();
@@ -188,9 +196,18 @@ void communicator::make_event_queues(
             }
         }
         else {
-            auto cn = cons.begin();
             auto sp = spks.begin();
-            while (cn!=cons.end() && sp!=spks.end()) {
+
+            while(sp!=spks.end()){
+                auto target=conn_table_map[sp->source];
+                for(; connections_[target].source()==sp->source; target++){
+                    queues[connections_[target].index_on_domain()].push_back(connections_[target].make_event(*sp));
+                }
+
+                ++sp;
+            }
+
+            /*while (cn!=cons.end() && sp!=spks.end()) {
                 auto targets = std::equal_range(cn, cons.end(), sp->source);
                 for (auto c: make_range(targets)) {
                     queues[c.index_on_domain()].push_back(c.make_event(*sp));
@@ -198,7 +215,7 @@ void communicator::make_event_queues(
 
                 cn = targets.first;
                 ++sp;
-            }
+            }*/
         }
     }
 }
