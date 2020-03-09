@@ -45,17 +45,19 @@ public:
     }
 };
 
-bool operator ==(cell_connection a, cell_connection b)
+
+namespace arb{
+bool operator ==(connection a, cell_connection b)
 {
-    return a.source == b.source && a.dest == b.dest && a.weight == b.weight && a.delay == b.delay;
+    return a.source() == b.source && a.destination() == b.dest && a.weight() == b.weight && a.delay() == b.delay;
 }
 
-bool operator !=(cell_connection a, cell_connection b)
+bool operator !=(connection a, cell_connection b)
 {
     return !(a==b);
 }
 
-bool operator ==(const std::vector<cell_connection> a, const std::vector<cell_connection> b)
+bool operator ==(const std::vector<connection> &a, const std::vector<cell_connection> &b)
 {
     if(a.size() != b.size()) return false;
     auto it_b = b.begin();
@@ -65,6 +67,7 @@ bool operator ==(const std::vector<cell_connection> a, const std::vector<cell_co
         it_b++;
     }
     return true;
+}
 }
 
 TEST(communicator, constructor) {
@@ -110,15 +113,7 @@ TEST(communicator, constructor) {
 
     communicator comm = communicator(testRecipe, dom_dec, *ctx);
 
-    EXPECT_EQ(comm.connections(), std::vector<cell_connection>({cell_connection({0, 0}, {1, 0}, 1, 60),
-                                                                           cell_connection({0, 0}, {1, 1}, 2, 10),
-                                                                           cell_connection({0, 0}, {2, 2}, 3, 22),
-                                                                           cell_connection({0, 0}, {3, 3}, 4, 16),
-                                                                           cell_connection({1, 0}, {0, 0}, 5, 30),
-                                                                           cell_connection({1, 0}, {3, 1}, 6, 14),
-                                                                           cell_connection({2, 0}, {1, 0}, 7, 12),
-                                                                           cell_connection({2, 0}, {3, 1}, 8, 20)}));
-
+    EXPECT_EQ(comm.connections(), connections);
 }
 
 
