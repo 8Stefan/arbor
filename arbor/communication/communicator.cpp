@@ -197,25 +197,15 @@ void communicator::make_event_queues(
         }
         else {
             auto sp = spks.begin();
-
             while(sp!=spks.end()){
-                auto target=conn_table_map[sp->source];
-                for(; connections_[target].source()==sp->source; target++){
+                auto target = conn_table_map[sp->source];
+                auto shifted_begin = cons.begin() - target;
+                for(; connections_[target].source()==sp->source && shifted_begin + target!=cons.end(); target++){
                     queues[connections_[target].index_on_domain()].push_back(connections_[target].make_event(*sp));
                 }
 
                 ++sp;
             }
-
-            /*while (cn!=cons.end() && sp!=spks.end()) {
-                auto targets = std::equal_range(cn, cons.end(), sp->source);
-                for (auto c: make_range(targets)) {
-                    queues[c.index_on_domain()].push_back(c.make_event(*sp));
-                }
-
-                cn = targets.first;
-                ++sp;
-            }*/
         }
     }
 }

@@ -37,7 +37,7 @@ struct domain_decomposition {
     /// decomposition.
     std::function<int(cell_gid_type)> gid_domain;
 
-    /// Number of distrubuted domains
+    /// Number of distributed domains
     int num_domains;
 
     /// The index of the local domain
